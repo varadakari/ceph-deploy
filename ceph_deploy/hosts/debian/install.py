@@ -105,6 +105,64 @@ def install(distro, version_kind, version, adjust_repos, **kw):
             ],
         )
 
+def local_deb_install(distro, local_path):
+    seq = ['librados', 'librbd', 'libcephfs1', 'python-ceph', 'ceph-common', 'ceph_']
+
+    # Install packages one by one
+    (out, err, status) = remoto.process.check(
+        distro.conn,
+        [
+            'ls',
+            local_path+'/'
+        ]
+    )
+
+    if status != 0:
+        raise RuntimeError(err)
+
+    """
+    remoto.process.run(
+        distro.conn,
+        [
+            'apt-get',
+            '-y',
+            'install',
+            'gdebi-core'
+        ],
+        stop_on_nonzero=False,
+    )
+    """
+
+    # install packages in sequence.
+    debs = out
+    to_be_installed_debs = out
+
+    for pkg in seq:
+        for deb in debs:
+            if deb.find(pkg) != -1:
+                remoto.process.run(
+                    distro.conn,
+                    [
+                        'dpkg',
+                        '-i',
+                        local_path+'/'+deb
+                    ],
+                    stop_on_nonzero=False,
+                )
+                to_be_installed_debs.remove(deb)
+
+    # Install any remaining packages
+    for deb in to_be_installed_debs:
+        remoto.process.run(
+            distro.conn,
+            [
+                'dpkg',
+                '-i',
+                local_path+'/'+deb
+            ],
+            stop_on_nonzero=False,
+        )
+
 
 def mirror_install(distro, repo_url, gpg_url, adjust_repos, **kw):
     # note: when split packages for ceph land for Debian/Ubuntu,

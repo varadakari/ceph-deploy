@@ -150,7 +150,12 @@ def install(args):
             repo_url = 'file:///opt/ceph-deploy/repo'
             gpg_url = 'file:///opt/ceph-deploy/repo/release.asc'
 
-        if repo_url:  # triggers using a custom repository
+        if args.dev_local:
+            # Install packages from this path instead of a repository.
+            remoto.rsync(hostname, args.dev_local, args.dev_local, distro.conn.logger, sudo=True)
+            distro.local_deb_install(distro, args.dev_local)
+
+        elif repo_url:  # triggers using a custom repository
             # the user used a custom repo url, this should override anything
             # we can detect from the configuration, so warn about it
             if cd_conf:
@@ -467,6 +472,13 @@ def make(parser):
         nargs=0,
         action=StoreVersion,
         help='install the latest development release',
+    )
+
+    version.add_argument(
+        '--dev-local',
+        nargs='?',
+        default=None,
+        help='install locally copied ceph packages',
     )
 
     version.add_argument(
